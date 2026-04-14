@@ -1,0 +1,12 @@
+{
+  "name": "test_static",
+  "private": true,
+  "scripts": {
+    "dev:server": "cd server && uv run uvicorn main:app --host 192.168.1.71 --port 8000 --reload",
+    "dev:client": "cd client && pnpm dev",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
