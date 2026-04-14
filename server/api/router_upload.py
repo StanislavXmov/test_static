@@ -44,7 +44,9 @@ async def create_upload_file(
                 with open(file_path, "wb") as buffer:
                     shutil.copyfileobj(file.file, buffer)
 
-                conn.execute("INSERT INTO images (filename) VALUES (?)", [file.filename])
+                conn.execute(
+                    "INSERT INTO images (filename) VALUES (?)", [file.filename]
+                )
                 conn.commit()
 
             except Exception as e:
@@ -100,9 +102,58 @@ async def get_images(
     init_db(conn)
     total_messages = conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0]
     messages = conn.execute(
-        "SELECT message FROM messages LIMIT ? OFFSET ?",
+        """
+        SELECT rowid AS id, message
+        FROM messages
+        LIMIT ? OFFSET ?
+        """,
         [limit, (page - 1) * limit],
     ).fetchall()
     conn.close()
-    message_strings = [row[0] for row in messages]
-    return {"messages": message_strings, "total_messages": total_messages}
+    message_items = [{"id": row[0], "message": row[1]} for row in messages]
+    return {"messages": message_items, "total_messages": total_messages}
+
+
+@router.delete("/images/{filename}")
+async def delete_image(filename: str):
+    upload_dir = Path("static/images")
+    file_path = upload_dir / filename
+
+    conn = duckdb.connect("data/database.db")
+    init_db(conn)
+    try:
+        existing = conn.execute(
+            "SELECT 1 FROM images WHERE filename = ? LIMIT 1", [filename]
+        ).fetchone()
+        if not existing:
+            raise HTTPException(status_code=404, detail="Image not found in database")
+
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="Image file not found on disk")
+
+        file_path.unlink()
+        conn.execute("DELETE FROM images WHERE filename = ?", [filename])
+        conn.commit()
+    finally:
+        conn.close()
+
+    return {"deleted": filename}
+
+
+@router.delete("/messages/{message_id}")
+async def delete_message(message_id: int):
+    conn = duckdb.connect("data/database.db")
+    init_db(conn)
+    try:
+        existing = conn.execute(
+            "SELECT 1 FROM messages WHERE rowid = ? LIMIT 1", [message_id]
+        ).fetchone()
+        if not existing:
+            raise HTTPException(status_code=404, detail="Message not found")
+
+        conn.execute("DELETE FROM messages WHERE rowid = ?", [message_id])
+        conn.commit()
+    finally:
+        conn.close()
+
+    return {"deleted_message": message_id}

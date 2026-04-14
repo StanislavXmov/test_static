@@ -58,8 +58,6 @@ export function Chat() {
       onSubmit: formSchema,
     },
     onSubmit: async ({ value, formApi }) => {
-      console.log({ value });
-
       // if (value.files && value.files.length > 0) {
       //   mutation.mutate(value.files);
       // }

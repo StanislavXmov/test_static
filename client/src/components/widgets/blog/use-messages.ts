@@ -4,7 +4,7 @@ export function useMessages(page: number = 0, limit: number = 5) {
   return useQuery({
     queryKey: ["messages"],
     queryFn: async (): Promise<{
-      messages: string[];
+      messages: { id: number; message: string }[];
       total_messages: number;
     }> => {
       const response = await fetch(
